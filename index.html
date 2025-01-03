@@ -4,9 +4,486 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>calc</title>
-  <link rel="stylesheet" href="style.css">
+  <title>calc-server</title>
 </head>
 <body>
+  <style>
+    .sizing,
+    .sizing *,
+    .sizing::before,
+    .sizing::after,
+    .sizing *::before,
+    .sizing *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      inline-size: 1px;
+      block-size: 1px;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .sizing__section {
+      max-inline-size: 1160px;
+      margin: 0 auto;
+    }
+
+    .sizing {
+      display: flex;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
+
+    .server-sizing {
+      inline-size: 350px;
+      max-inline-size: 100%;
+      min-inline-size: 250px;
+      block-size: 100%;
+      padding: 30px 20px;
+      box-shadow: 0px 0px 10px 0px rgba(123,123,123,0.1);
+      border-radius: 20px;
+    }
+
+    .server-sizing__fieldset {
+      border: none;
+      margin-bottom: 20px;
+      padding: 0;
+      inline-size: 100%;
+    }
+
+    .server-sizing__label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .server-sizing__number {
+      appearance: none;
+      inline-size: 100%;
+      padding: 8px 5px;
+      border: 1px solid #969696;
+      border-radius: 8px;
+      font-family: sans-serif;
+      font-weight: 400;
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .server-sizing__placeholder {
+      color: #969696;
+      font-family: sans-serif;
+      left: 6px;
+      font-size: 14px;
+      line-height: 14px;
+      pointer-events: none;
+      position: absolute;
+      transform-origin: 0 50%;
+      transition: transform 100ms, color 200ms;
+      top: 10px;
+      padding: 0 2px;
+      background-color: #fff;
+    }
+
+    .server-sizing__number:focus ~ .server-sizing__placeholder,
+    .server-sizing__number:not(:placeholder-shown) ~ .server-sizing__placeholder {
+      transform: translateY(-18px) translateX(5px) scale(0.9);
+    }
+
+    .server-sizing__number:not(:placeholder-shown) ~ .server-sizing__placeholder {
+      color: #969696;
+    }
+
+    .server-sizing__number:focus ~ .server-sizing__placeholder {
+      color: #005eff;
+    }
+
+    .server-sizing__number:focus {
+      outline: none;
+    }
+
+    .server-sizing__number:focus-visible {
+      border: 1px solid #005eff;
+    }
+
+    .server-sizing__error {
+      color: #e31220;
+      font-family: sans-serif;
+      right: 11px;
+      bottom: -5px;
+      font-size: 12px;
+      line-height: 12px;
+      pointer-events: none;
+      position: absolute;
+      padding: 0 2px;
+      background-color: #fff;
+    }
+
+    .server-sizing__fieldset-title {
+      font-family: sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      line-height: 1.2;
+      padding: 5px 0 10px;
+    }
+
+    .server-sizing__radio-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    .server-sizing__pseudo-radio {
+      display: inline-block;
+      border: 2px solid #005eff;
+      border-radius: 50%;
+      background-color: transparent;
+      inline-size: 20px;
+      block-size: 20px;
+    }
+
+    .server-sizing__radio:checked + .server-sizing__pseudo-radio::before {
+      content: "";
+      inset: 0;
+      display: block;
+      margin: 2px;
+      background-color: #005eff;
+      inline-size: 12px;
+      block-size: 12px;
+      border-radius: 50%;
+    }
+
+    .server-sizing__label:has(.server-sizing__radio:focus-visible) {
+      outline: 2px solid #005eff;
+      outline-offset: 2px;
+      border: none;
+      border-radius: 8px;
+    }
+
+    .server-sizing__label-text {
+      font-family: sans-serif;
+      font-weight: 400;
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .server-sizing__disable {
+      color: #969696;
+    }
+
+    .server-sizing__button-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .server-sizing__button {
+      border: transparent;
+      border-radius: 8px;
+      padding: 10px;
+      font-family: sans-serif;
+      font-weight: 400;
+      font-size: 14px;
+      line-height: 1.2;
+      cursor: pointer;
+      color: #fff;
+    }
+
+    .server-sizing__button_calculate {
+      background-color: #26D496;
+    }
+
+    .server-sizing__button_reset {
+      background-color: #005eff;
+    }
+
+    .server-sizing__button_calculate:focus {
+      outline: none;
+    }
+
+    .server-sizing__button_reset:focus {
+      outline: none;
+    }
+
+    .server-sizing__button_calculate:focus-visible {
+      outline: 2px solid #26D496;
+      outline-offset: 2px;
+    }
+
+    .server-sizing__button_reset:focus-visible {
+      outline: 2px solid #005eff;
+      outline-offset: 2px;
+    }
+
+    .server-sizing__info {
+      font-size: 14px;
+      font-family: sans-serif;
+      padding-bottom: 15px;
+    }
+
+    .result-sizing {
+      max-inline-size: 450px;
+      min-inline-size: 400px;
+      margin-left: 20px;
+    }
+
+    .result-sizing__title {
+      font-size: 24px;
+      font-family: sans-serif;
+      margin: 30px 0 15px;
+    }
+
+    .result-sizing__content {
+      font-size: 16px;
+      font-family: sans-serif;
+    }
+
+    .result-sizing__info {
+      font-size: 12px;
+      font-family: sans-serif;
+      color: #969696;
+      padding-top: 10px;
+    }
+
+    .result-sizing__grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.5fr 2fr;
+      gap: 10px;
+    }
+
+    @media (max-width: 1200px) {
+      .sizing__section {
+        max-inline-size: 960px;
+      }
+    }
+
+    @media (max-width: 960px) {
+      .sizing__section {
+        max-inline-size: 640px;
+      }
+    }
+
+    @media (max-width: 960px) {
+      .sizing__section {
+        max-inline-size: 640px;
+      }
+    }
+  </style>
+
+  <section class="section">
+    <div class="sizing">
+      <form
+        class="sizing__form"
+        name="sizing"
+      >
+        <input
+          type="text"
+          class="sizing__input"
+          name="userTotal"
+        >
+
+        <input
+          type="text"
+          class="sizing__input"
+          name="userOnline"
+        >
+
+        <fieldset
+          class="sizing__fieldset"
+          name="faultTolerance"
+        >
+          <legend class="sizing__fieldset-title">Нужна ли отказоустойчивость?</legend>
+
+          <label class="sizing__label">
+            <input
+              type="radio"
+              class="sizing__radio-hidden"
+              name="faultToleranceValue"
+              value="true"
+              checked
+            >
+
+            <span class="sizing__radio"></span>
+
+            <span class="sizing__radio-text">Да</span>
+          </label>
+          
+          <label class="sizing__label">
+            <input
+              type="radio"
+              class="sizing__radio-hidden"
+              name="faultToleranceValue"
+              value="false"
+            >
+
+            <span class="sizing__radio"></span>
+
+            <span class="sizing__radio-text">Нет</span>
+          </label>
+        </fieldset>
+
+        <fieldset
+          class="sizing__fieldset"
+          name="webServer"
+        >
+          <legend class="sizing__fieldset-title">Какой веб-сервер приложения?</legend>
+
+          <label class="sizing__label">
+            <input
+              type="radio"
+              class="sizing__radio-hidden"
+              name="webServerValue"
+              value="linux"
+              checked
+            >
+
+            <span class="sizing__radio"></span>
+
+            <span class="sizing__radio-text">Linux</span>
+          </label>
+          
+          <label class="sizing__label">
+            <input
+              type="radio"
+              class="sizing__radio-hidden"
+              name="webServerValue"
+              value="windows"
+            >
+
+            <span class="sizing__radio"></span>
+
+            <span class="sizing__radio-text">Windows</span>
+          </label>
+        </fieldset>
+
+        <fieldset
+          class="sizing__fieldset"
+          name="dataBase"
+        >
+          <legend class="sizing__fieldset-title">Какая база данных используется?</legend>
+
+          <label class="sizing__label">
+            <input
+              type="radio"
+              class="sizing__radio-hidden"
+              name="dataBaseValue"
+              value="postgres"
+              checked
+            >
+
+            <span class="sizing__radio"></span>
+
+            <span class="sizing__radio-text">Postgres</span>
+          </label>
+          
+          <label class="sizing__label">
+            <input
+              type="radio"
+              class="sizing__radio-hidden"
+              name="dataBaseValue"
+              value="mssql"
+            >
+
+            <span class="sizing__radio"></span>
+
+            <span class="sizing__radio-text">MSSQL</span>
+          </label>
+        </fieldset>
+
+        <fieldset
+          class="sizing__fieldset"
+          name="vks"
+        >
+          <legend class="sizing__fieldset-title">Будет ли использоваться ВКС?</legend>
+
+          <label class="sizing__label">
+            <input
+              type="radio"
+              class="sizing__radio-hidden"
+              name="vksValue"
+              value="true"
+              checked
+            >
+
+            <span class="sizing__radio"></span>
+
+            <span class="sizing__radio-text">Да</span>
+          </label>
+          
+          <label class="sizing__label">
+            <input
+              type="radio"
+              class="sizing__radio-hidden"
+              name="vksValue"
+              value="false"
+            >
+
+            <span class="sizing__radio"></span>
+
+            <span class="sizing__radio-text">Нет</span>
+          </label>
+        </fieldset>
+
+        <input
+          type="text"
+          class="sizing__input"
+          name="vksUserOnline"
+        >
+
+        <input
+          type="text"
+          class="sizing__input"
+          name="vksRooms"
+        >
+
+        <button
+          type="submit"
+          class="button button__calculate"
+          name="buttonCalculate"
+        >
+          Рассчитать
+        </button>
+
+        <button
+          type="button"
+          class="button button__reset"
+          name="buttonReset"
+        >
+          Очистить
+        </button>
+      </form>
+    </div>
+
+    <div class="result"></div>
+  </section>
+
+  <template id="result-section-template">
+    <div class="result__section">
+      <h2 class="result__section-title"></h2>
+      <div class="result__section-content"></div>
+    </div>
+  </template>
+
+  <template id="result-item-template">
+    <div class="result__item">
+      <span class="result__text" id="resultCPU"></span>
+      <span class="result__text" id="resultRAM"></span>
+      <span class="result__text" id="resultStorage"></span>
+      <span class="result__text" id="resultDescription"></span>
+    </div>
+  </template>
+
+  <script src="./index.js"></script>
 </body>
 </html>
