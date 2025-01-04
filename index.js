@@ -1,10 +1,90 @@
 const form = document.forms.sizing;
+const buttonCalculate = form.buttonCalculate;
 const buttonReset = form.buttonReset;
-
 const resultPlace = document.querySelector('.result');
-
 const resultSectionTemplate = document.querySelector('#result-section-template');
 const resultItemTemplate = document.querySelector('#result-item-template');
+
+const baseItems = [
+  { cpu: '6', ram: '32', storage: '18' },
+  { cpu: '2', ram: '4', storage: '8' },
+  { cpu: '4', ram: '8', storage: '16' },
+  { cpu: '8', ram: '16', storage: '32', description: 'Базовая конфигурация' }
+];
+
+const showInputError = (inputElement, errorMessage) => {
+  const errorElement = form.querySelector(`.${inputElement.id}-error`);
+  inputElement.classList.add('sizing__input_type_error');
+  errorElement.textContent = errorMessage;
+};
+
+const hideInputError = (inputElement) => {
+  const errorElement = form.querySelector(`.${inputElement.id}-error`);
+  inputElement.classList.remove('sizing__input_type_error');
+  errorElement.textContent = '';
+};
+
+const checkInputValidity = (inputElement) => {
+  if (!inputElement.validity.valid) {
+    showInputError(inputElement, inputElement.validationMessage);
+  } else {
+    hideInputError(inputElement);
+  }
+};
+
+const checkUserOnlineValidity = () => {
+  const userTotal = form.userTotal;
+  const userOnline = form.userOnline;
+  
+  if (userOnline.value === '') {
+    return true; // Поле может быть пустым
+  }
+  
+  if (parseInt(userOnline.value) > parseInt(userTotal.value)) {
+    showInputError(userOnline, userOnline.dataset.errorText);
+    return false;
+  } else {
+    hideInputError(userOnline);
+    return true;
+  }
+};
+
+const hasInvalidInput = (inputList) => inputList.some((inputElement) => {
+  const isVisible = !inputElement.closest('.hidden');
+  return isVisible && !inputElement.validity.valid;
+});
+
+const toggleButtonState = (buttonElement) => {
+  const activeInputs = getActiveInputs();
+  const isFormValid = activeInputs.every(input => input.validity.valid) && checkUserOnlineValidity();
+  buttonElement.disabled = !isFormValid;
+};
+
+const setEventListeners = () => {
+  const inputList = getActiveInputs();
+  
+  toggleButtonState(buttonCalculate);
+
+  inputList.forEach((inputElement) => {
+    inputElement.addEventListener('input', () => {
+      checkInputValidity(inputElement);
+      checkUserOnlineValidity();
+      toggleButtonState(buttonCalculate);
+    });
+  });
+};
+
+const getActiveInputs = () => Array.from(form.querySelectorAll('input[type="number"]:not(.hidden)')).filter(input => !input.closest('.hidden'));
+
+const enableValidation = () => {
+  setEventListeners();
+};
+
+const clearValidation = () => {
+  const inputList = getActiveInputs();
+  inputList.forEach((inputElement) => hideInputError(inputElement));
+  toggleButtonState(buttonCalculate);
+};
 
 const createResultItem = ( { cpu, ram, storage, description = ''} ) => {
   const resultItem = resultItemTemplate.content.cloneNode(true);
@@ -20,13 +100,6 @@ const createResultItem = ( { cpu, ram, storage, description = ''} ) => {
 
   return resultItem;
 };
-
-const baseItems = [
-  { cpu: '6', ram: '32', storage: '18' },
-  { cpu: '2', ram: '4', storage: '8' },
-  { cpu: '4', ram: '8', storage: '16' },
-  { cpu: '8', ram: '16', storage: '32' }
-];
 
 const createResultSection = ( { title }, array ) => {
   const resultSection = resultSectionTemplate.content.cloneNode(true);
@@ -45,27 +118,59 @@ const createResultSection = ( { title }, array ) => {
 const handleCalculateSubmit = (event) => {
   event.preventDefault();
 
-  resultPlace.textContent = '';
+  const activeInputs = getActiveInputs();
+  const isFormValid = activeInputs.every(input => input.validity.valid) && checkUserOnlineValidity();
 
-  const formValues = {
-    userTotal: form.userTotal.value,
-    userOnline: form.userOnline.value || Math.ceil(form.userTotal.value / 3),
-    faultTolerance: form.faultTolerance.querySelector('input[name="faultToleranceValue"]:checked').value,
-    webServer: form.webServer.querySelector('input[name="webServerValue"]:checked').value,
-    dataBase: form.dataBase.querySelector('input[name="dataBaseValue"]:checked').value,
-    vks: form.vks.querySelector('input[name="vksValue"]:checked').value,
-    vksUserOnline: form.vksUserOnline.value,
-    vksRooms: form.vksRooms.value
-  };
-
-  resultPlace.append(createResultSection( { title: 'Результат 1' }, baseItems ));
-  resultPlace.append(createResultSection( { title: 'Результат 2' }, baseItems ));
-  resultPlace.append(createResultSection( { title: 'Результат 3' }, baseItems ));
+  if (isFormValid) {
+    resultPlace.textContent = '';
+    resultPlace.append(
+      createResultSection({ title: 'Результат 1' }, baseItems),
+      createResultSection({ title: 'Результат 2' }, baseItems),
+      createResultSection({ title: 'Результат 3' }, baseItems)
+    );
+  } else {
+    console.log('Форма невалидна');
+  }
 };
+
+const setInitialVksState = () => {
+  const vksRadio = form.querySelector('input[name="vksValue"][value="true"]');
+  const vksFieldset = form.querySelector('.sizing__fieldset_vks');
+  vksFieldset.classList.toggle('hidden', !vksRadio.checked);
+};
+
+const toggleVksFields = () => {
+  const vksRadios = form.querySelectorAll('input[name="vksValue"]');
+  const vksFieldset = form.querySelector('.sizing__fieldset_vks');
+  const vksInputs = vksFieldset.querySelectorAll('input[type="number"]');
+
+  vksRadios.forEach(radio => {
+    radio.addEventListener('change', () => {
+      const showVksFields = radio.value === 'true';
+      vksFieldset.classList.toggle('hidden', !showVksFields);
+      
+      vksInputs.forEach(input => {
+        input.required = showVksFields;
+        if (!showVksFields) {
+          input.value = '';
+          hideInputError(input);
+        }
+      });
+      
+      toggleButtonState(buttonCalculate);
+    });
+  });
+};
+
+form.addEventListener('submit', handleCalculateSubmit);
 
 buttonReset.addEventListener('click', () => {
   form.reset();
+  setInitialVksState();
+  clearValidation();
   resultPlace.textContent = '';
 });
 
-form.addEventListener('submit', handleCalculateSubmit);
+setInitialVksState();
+toggleVksFields();
+enableValidation();
