@@ -133,6 +133,8 @@ const handleCalculateSubmit = (event) => {
   }
 };
 
+form.addEventListener('submit', handleCalculateSubmit);
+
 const setInitialVksState = () => {
   const vksRadio = form.querySelector('input[name="vksValue"][value="true"]');
   const vksFieldset = form.querySelector('.sizing__fieldset_vks');
@@ -161,8 +163,6 @@ const toggleVksFields = () => {
     });
   });
 };
-
-form.addEventListener('submit', handleCalculateSubmit);
 
 buttonReset.addEventListener('click', () => {
   form.reset();
