@@ -187,14 +187,12 @@ const dataBaseCalculate = (userOnline, faultTolerance, dataBase) => {
       description: 'Отказоусточивость'
     };
 
-    dataBaseData = dataBaseData.concat(POSTGRES_BASE);
-
     dataBaseData.push(dataBaseItemFaultTolerance);
   }
 
-  // if (dataBase === 'Postgres') {
-  //   dataBaseData = dataBaseData.concat(POSTGRES_BASE);
-  // };
+  if (dataBase === 'Postgres' && faultTolerance === 'true') {
+    dataBaseData = dataBaseData.concat(POSTGRES_BASE);
+  };
 
   return dataBaseData;
 };
